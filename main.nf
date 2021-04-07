@@ -6,6 +6,7 @@ if (params.help) {
     ------------------------------------------------------------------
     ctseq-nf: a Nextflow workflow for ctseq
     See full details of ctseq at: https://github.com/ryanhmiller/ctseq
+    Individual steps are run separately for parallelization
     ==================================================================
 
     Required arguments:
@@ -18,7 +19,7 @@ if (params.help) {
 
     --run       Run name used in final report and plots.
 
-    --info      Path to feag info file
+    --info      Path to frag info file
     ------------------------------------------------------------------
     """.stripIndent()
     exit 0
@@ -54,7 +55,7 @@ process collapse {
     path(${baseDir}/combineFiles.py)
 
   output:
-    path(${params.combined})
+    path(${baseDir}/combined)
 
   script:
     """
@@ -62,28 +63,77 @@ process collapse {
     """
 }
 
-// run ctseq analyze
-process ctseq {
+// channel of combined fastqs
+Channel
+    .fromFilePairs("${baseDir}/combined/${params.run}*_{1,2,3}.fastq.gz", size: 3)
+    .into { fastq }
+
+/*
+// run ctseq add_umis
+process add_umis {
+  input:
+    path(${params.ctseqSing})
+
+  output:
+
+  script:
+    """
+    singularity exec ${params.ctseqSing} ctseq add_umis \
+      --umiType separate \
+      --umiLength 12 \
+      --forwardExt R1_001.fastq.gz \
+      --reverseExt R3_001.fastq.gz \
+      --umiExt R2_001.fastq.gz \
+    """
+}
+
+// run ctseq align
+process align {
+  input:
+    path(${params.panel})
+    path(${params.ctseqSing})
+
+  output:
+
+  script:
+    """
+    singularity exec ${params.ctseqSing} ctseq align \
+      --refDir ${params.panel} \
+      --cutadaptCores 18 \
+      --bismarkCores 6 \
+    """
+}
+
+// run ctseq call_molecules
+process call_molecules {
+  input:
+    path(${params.panel})
+    path(${params.ctseqSing})
+
+  output:
+
+  script:
+    """
+    singularity exec ${params.ctseqSing} ctseq call_molecules \
+      --refDir ${params.panel} \
+      --processes 10 \
+    """
+}
+
+// run ctseq call_methylation
+process call_methylation {
   input:
     path(${params.panel})
     path(${params.combined})
     path(${params.ctseqSing})
 
   output:
-    path(${params.combined})
 
   script:
     """
-    singularity exec ${params.ctseqSing} ctseq analyze \
+    singularity exec ${params.ctseqSing} ctseq call_methylation \
       --refDir ${params.panel} \
       --dir ${params.combined} \
-      --umiType separate \
-      --umiLength 12 \
-      --forwardExt R1_001.fastq.gz \
-      --reverseExt R3_001.fastq.gz \
-      --umiExt R2_001.fastq.gz \
-      --cutadaptCores 18 \
-      --bismarkCores 6 \
       --processes 10 \
       --nameRun ${params.run}
     """
@@ -104,3 +154,4 @@ process plot {
     singularity exec ${params.ctseqSing} ctseq plot --dir ${params.combined} --fragInfo ${params.info}
     """
 }
+*/
