@@ -26,8 +26,11 @@ if (params.help) {
 }
 
 // required arguments
-params.panel = false
+params.panel = '/scratch/general/pe-nfs1/u0806040/varley_test/methPanel_v3_8_27_20'
 if ( !params.panel ) { exit 1, "reference panel is not defined" }
+
+params.ctseqSing = '/scratch/general/pe-nfs1/u0806040/varley_test/ctseq-v0.0.3.sif'
+if ( !params.ctseqSing ) { exit 1, "ctseq singularity image not defined" }
 
 params.fastq = false
 if ( !params.fastq ) { exit 1, "full path to fastq files is not defined" }
@@ -35,46 +38,28 @@ if ( !params.fastq ) { exit 1, "full path to fastq files is not defined" }
 params.run = false
 if ( !params.run ) { exit 1, "name of run is not defined" }
 
-params.info = false
+params.info = '/scratch/general/pe-nfs1/u0806040/varley_test/methPanel_v3_infoFile.txt'
 if ( !params.info ) { exit 1, "path to fragment info file is not defined" }
 
 // logging 
 log.info("\n")
 log.info("Run name           (--run)             :${params.run}")
-log.info("ctseq image        (--ctseqSing)       :${params.fastq}")
+log.info("ctseq image        (--ctseqSing)       :${params.ctseqSing}")
 log.info("Fastq directory    (--fastq)           :${params.fastq}")
 log.info("Reference panel    (--panel)           :${params.panel}")
 log.info("Fragment info file (--info)            :${params.info}")
 
-// collapse lanes
-process collapse {
-  module 'python/3.5.2'  
-
-  input:
-    path(${params.fastq})
-    path(${baseDir}/combineFiles.py)
-
-  output:
-    path(${baseDir}/combined)
-
-  script:
-    """
-    python ${baseDir}/combineFiles.py -fastq ${params.fastq} -combined "${baseDir}/combined" -run ${params.run}
-    """
-}
-
 // channel of combined fastqs
-Channel
-    .fromFilePairs("${baseDir}/combined/${params.run}*_{1,2,3}.fastq.gz", size: 3)
-    .into { fastq }
+fastq_trios = channel.fromFilePairs("${baseDir}/combined/*_R{1,2,3}_001.fastq.gz", size: 3)
 
-/*
 // run ctseq add_umis
 process add_umis {
+  stageInMode 'link'
   input:
-    path(${params.ctseqSing})
+    tuple val(id), path(fastqs)
 
   output:
+    tuple val("${id}"), path("${id}_*ReadsWithUMIs.fastq")
 
   script:
     """
@@ -87,11 +72,11 @@ process add_umis {
     """
 }
 
+/*
 // run ctseq align
 process align {
   input:
     path(${params.panel})
-    path(${params.ctseqSing})
 
   output:
 
@@ -108,7 +93,6 @@ process align {
 process call_molecules {
   input:
     path(${params.panel})
-    path(${params.ctseqSing})
 
   output:
 
@@ -125,7 +109,6 @@ process call_methylation {
   input:
     path(${params.panel})
     path(${params.combined})
-    path(${params.ctseqSing})
 
   output:
 
@@ -144,7 +127,6 @@ process plot {
   input:
     path(${params.combined})
     path(${params.info})
-    path(${params.ctseqSing})
 
   output:
     path(${params.combined})
@@ -155,3 +137,7 @@ process plot {
     """
 }
 */
+
+workflow {
+    add_umis(fastq_trios)
+}
