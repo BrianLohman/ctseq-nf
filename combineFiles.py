@@ -28,7 +28,7 @@ reverseExt='_R3_001.fastq.gz'
 umiExt='_R2_001.fastq.gz'
 
 # set run name
-runName=str(args.run)
+runName=str(args.run)[:-1]+"X"
 
 # get number of samples
 n = len(set([i.split('/')[-1].split('_')[0] for i in glob.glob(args.fastq+'/*R1_001.fastq.gz')]))
