@@ -1,8 +1,11 @@
 # ctseq-nf
 A Nextflow workflow for `ctseq` to enable parallel deployment of jobs across many nodes.  
+  
 See full details of ctseq here: `https://github.com/ryanhmiller/ctseq`  
+  
 `ctseq-nf` runs each step of `ctseq analyze` as Nextflow process, allowing for parallel  
 deployment of jobs across any number of nodes.  
+  
 `ctseq-nf` will also manage resoruce allocation and request greater resources  
 when jobs with a large number of reads fail.  
 
